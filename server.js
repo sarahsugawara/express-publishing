@@ -39,13 +39,13 @@ apiRouter.get('/artists', (req, res, next) => {
 //         $biography: artist.biography,
 //         $employed: artist.is_currently_employed
 //     },
-//     function (error) {
+//     function (err) {
 //         db.get("SELECT * FROM Artist WHERE id = $id", 
 //         {
 //             $id: this.lastID
 //         },
-//         (error, row) => {
-//             if (error) {
+//         (err, row) => {
+//             if (err) {
 //                 res.status(500).send();
 //             }
 //             res.status(201).send({ artist: row });
@@ -62,8 +62,8 @@ apiRouter.get('/artists/:artistId', (req, res, next) => {
         {
             $id: artistId
         },
-        (error, row) => {
-            if (error) {
+        (err, row) => {
+            if (err) {
                 res.status(404).send();
             }
             res.status(200).send({ artist: row });
@@ -88,16 +88,16 @@ apiRouter.get('/artists/:artistId', (req, res, next) => {
 //             $employed: artist.is_currently_employed,
 //             $id: artistId
 //         },
-//         function (error) {
-//             if (error) {
+//         function (err) {
+//             if (err) {
 //                 res.status(404).send();
 //             }
 //             db.get("SELECT * FROM Artist WHERE id = $id", 
 //             {
 //                 $id: artistId
 //             },
-//             (error, row) => {
-//                 if (error) {
+//             (err, row) => {
+//                 if (err) {
 //                     res.status(404).send();
 //                 }
 //                 res.status(200).send({ artist: row });
@@ -117,16 +117,16 @@ apiRouter.delete('/artists/:id', (req, res, next) => {
     {
         $id: artistId
     },
-    function (error) {
-        if (error) {
+    function (err) {
+        if (err) {
             res.status(404).send();
         }
         db.get("SELECT * FROM Artist WHERE id = $id", 
         {
             $id: artistId
         },
-        (error, row) => {
-            if (error) {
+        (err, row) => {
+            if (err) {
                 res.status(404).send();
             }
             res.status(200).send({ artist: row });
@@ -135,6 +135,140 @@ apiRouter.delete('/artists/:id', (req, res, next) => {
     }
 });
 
+
+//* Begin Series Routers
+
+// const validateSeries = (req, res, next) => {
+//     const newSeries = req.body.series;
+//     if (!newSeries || !newSeries.name || !newSeries.description) {
+//         res.status(400).send();
+//     }
+//     next();
+// }
+
+apiRouter.get('/series', (req, res, next) => {
+    db.all("SELECT * FROM Series", (err, rows) => {
+        if (err) {
+            res.status(500).send(err);
+        }
+        res.status(200).send({ series: rows });
+    });
+});
+
+//! Receiving error that "series" is undefined (within the request body). Same type of error as above.
+// apiRouter.post('/series', validateSeries, (req, res, next) => {
+//     const newSeries = req.body.series;
+//     db.run("INSERT INTO Series (name, description) VALUES ($name, $description)", 
+//     {
+//         $name: newSeries.name,
+//         $description: newSeries.description
+//     },
+//     function (err) {
+//         if (err) {
+//             res.status(400).send();
+//         }
+//         db.get("SELECT * FROM Series WHERE id = $id", 
+//         {   
+//             $id: this.lastID
+//         },
+//         (err, row) => {
+//             if (err) {
+//                 res.status(400).send();
+//             }
+//             res.status(201).send({ series: row });
+//         }
+//         );
+//     });
+// });
+
+//TODO: Need to validate series Id
+apiRouter.get('/series/:id', (req, res, next) => {
+    const seriesId = req.params.id;
+    if (seriesId) {
+        db.get("SELECT * FROM Series WHERE id = $id", 
+        {
+            $id: seriesId
+        },
+        (err, row) => {
+           if (err) {
+               res.status(404).send();
+           }
+           res.status(200).send({ series: row });
+        }
+    );
+    }
+    else {
+        res.status(404).send();
+    }
+});
+
+//!Fails because 'series' is undefined
+//TODO: Need to validate series Id
+// apiRouter.put('/series/:id', validateSeries, (req, res, next) => {
+//     const seriesId = req.params.id;
+//     const updatedSeries = req.body.series;
+//     if (seriesId) {
+//         db.run("UPDATE Series SET name = $name, description = $description WHERE id = $id",
+//         {
+//             $name: updatedSeries.name,
+//             $description: updatedSeries.description
+//         },
+//         function (err) {
+//             if (err) {
+//                 res.status(400).send();
+//             }
+//             db.get("SELECT * FROM series WHERE id = $id",
+//             {
+//                 $id: this.lastID
+//             },
+//             (err, row) => {
+//                 if (err) {
+//                     res.status(400).send();
+//                 }
+//                 res.status(200).send({ series: row });
+//             }
+//             );
+//         }
+//         );
+//     }
+//     else {
+//         res.status(404).send();
+//     }
+// });
+
+apiRouter.delete('/series/:id', (req, res, next) => {
+    const seriesId = req.params.id;
+    if (seriesId) {
+        db.all("SELECT * FROM Issue WHERE series_id = $seriesId", 
+        {
+            $seriesId: seriesId
+        },
+        (err, rows) => {
+            if (err) {
+                res.status(404).send();
+            }
+            else if (rows) {
+                res.status(404).send('Can\'t delete series because it has related issues');
+            }
+            else if (!rows) {
+                db.run("DELETE FROM Series WHERE id = $id IS NULL",
+                {
+                    $id: seriesId
+                },
+                (err) => {
+                    if (err) {
+                        res.status(400).send();
+                    }
+                    res.status(204).send();
+                }
+                );
+            }
+        });
+    }
+    else {
+        res.status(404).send();
+    }
+});
 
 
 
