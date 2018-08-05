@@ -271,5 +271,26 @@ apiRouter.delete('/series/:id', (req, res, next) => {
 });
 
 
+//* Begin Issues routers
+
+apiRouter.get('/series/:id/issues', (req, res, next) => {
+    const seriesId = req.params.id;
+    db.all("SELECT * FROM Issue WHERE series_id = $id",
+        {
+            $id: seriesId
+        },
+        (err, rows) => {
+        if (err) {
+            res.status(500).send(err);
+        }
+        else if (rows) {
+            res.status(200).send({ issues: rows });
+        }
+        else {
+            res.status(404).send();
+        }
+    });
+});
+
 
 module.exports = app;
