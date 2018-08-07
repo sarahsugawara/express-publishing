@@ -278,7 +278,7 @@ apiRouter.delete('/series/:id', (req, res, next) => {
 
 const validateIssue = (req, res, next) => {
     const newIssue = req.body.issues;
-    if (!newIssue || !newIssue.name || !newIssue.issue_number || newIssue.publication_date || newIssue.artist_id || newIssue.series_id) {
+    if (!newIssue || !newIssue.name || !newIssue.issue_number || newIssue.publication_date || newIssue.artist_id) {
         console.log(`>>>>>>>> issue info is incomplete`);
         res.status(400).send();
     }
@@ -287,8 +287,8 @@ const validateIssue = (req, res, next) => {
 }
 
 const validateSeriesId = (req, res, next) => {
-    const seriesId = req.body.issue && req.body.issue.seriesId;
-    console.log(`>>>>>>>> ${pp(req.body.issue)}`);
+    const seriesId = req.params.seriesId;
+    console.log(`>>>>>>>> ${pp(seriesId)}`);
     // db.get(`SELECT * FROM Series WHERE id = ${seriesId}`, 
     // (err, row) => {
     //     if (err) {
@@ -306,8 +306,8 @@ const validateSeriesId = (req, res, next) => {
     // });
 }
 
-apiRouter.get('/series/:id/issues', validateSeriesId, (req, res, next) => {
-    const seriesId = req.body.issues && req.body.issues.series_id;
+apiRouter.get('/series/:seriesId/issues', validateSeriesId, (req, res, next) => {
+    const seriesId = req.params.seriesId;
     console.log(`>>>>>>>> ${pp(seriesId)}`);
     // db.all(`SELECT * FROM Issue WHERE series_id = ${seriesId}`,
     //     (err, rows) => {
@@ -323,8 +323,9 @@ apiRouter.get('/series/:id/issues', validateSeriesId, (req, res, next) => {
     // });
 });
 //*I think I need to secure seriesId elsewhere, because it's not in the request body
-apiRouter.post('/series/:id/issues', validateSeriesId, validateIssue, (req, res, next) => {
+apiRouter.post('/series/:seriesId/issues', validateSeriesId, validateIssue, (req, res, next) => {
     const newIssue = req.body.issue;
+    const seriesId = req.params.seriesId;
     console.log(`>>>>>>>> ${pp(newIssue)}`);
     // db.run(`INSERT INTO Issue (name, issue_number, publication_date, artist_id, series_id) VALUES ($name, $number, $date, $artistId, $seriesId)`, 
     // {
@@ -332,7 +333,7 @@ apiRouter.post('/series/:id/issues', validateSeriesId, validateIssue, (req, res,
     //     $number: newIssue.issueNumber,
     //     $date: newIssue.publicationDate,
     //     $artistId: newIssue.artistId,
-    //     $seriesId: newIssue.seriesId
+    //     $seriesId: seriesId
     // },
     // function (err) {
     //     if (err) {
