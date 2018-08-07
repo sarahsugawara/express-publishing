@@ -2,22 +2,31 @@ const express = require('express');
 const app = express();
 const sqlite3 = require('sqlite3');
 const db = new sqlite3.Database(process.env.TEST_DATABASE || './database.sqlite');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const errorhandler = require('errorhandler');
 
 const pp = x => JSON.stringify(x, null, 2);
 const PORT = process.env.PORT || 4000;
+
+app.use(bodyParser.json());
+app.use(cors());
+app.use(errorhandler());
 
 app.listen(PORT);
 
 const apiRouter = express.Router();
 app.use('/api', apiRouter);
 
-// const validateArtist = (req, res, next) => {
-//     const body = req.body.artist;
-//     if (!body.name || !body.date_of_birth || !body.biography || !body.is_currently_employed) {
-//         res.status(400).send();
-//     }
-//     next();
-// }
+const validateArtist = (req, res, next) => {
+    const body = req.body.artist;
+    if (!body.name || !body.dateOfBirth || !body.biography) {
+        res.status(400).send();
+    }
+    else {
+        next();
+    }
+}
 
 apiRouter.get('/artists', (req, res, next) => {
      db.all("SELECT * FROM Artist WHERE is_currently_employed = 1", (err, rows) => {
@@ -28,31 +37,38 @@ apiRouter.get('/artists', (req, res, next) => {
     });
 });
 
-//! Receiving error that "artist" is undefined (within the request body)
-// apiRouter.post('/artists', validateArtist, (req, res, next) => {
-//     console.log(`>>>>>>>> request.body is: ${pp(req.body.artist)}`);
-//     const artist = req.body.artist;
-//     db.run("INSERT INTO Artist (name, date_of_birth, biography, is_currently_employed) VALUES ($name, $dateOfBirth, $biography, $employed)", 
-//     {
-//         $name: artist.name,
-//         $dateOfBirth: artist.date_of_birth,
-//         $biography: artist.biography,
-//         $employed: artist.is_currently_employed
-//     },
-//     function (err) {
-//         db.get("SELECT * FROM Artist WHERE id = $id", 
-//         {
-//             $id: this.lastID
-//         },
-//         (err, row) => {
-//             if (err) {
-//                 res.status(500).send();
-//             }
-//             res.status(201).send({ artist: row });
-//         })
-//     }
-//     )
-// });
+apiRouter.post('/artists', validateArtist, (req, res, next) => {
+    const artist = req.body.artist;
+    const name = artist.name;
+    const birth = artist.dateOfBirth;
+    const biography = artist.biography;
+    // console.log(`>>>>>>>> ${pp(artist)}, ${pp(name)}, ${pp(birth)}, ${pp(biography)}`);
+    
+    db.run(`INSERT INTO Artist (name, date_of_birth, biography, is_currently_employed) VALUES ($name, $birth, $biography, $employed)`, 
+    {
+        $name: name,
+        $birth: birth,
+        $biography: biography,
+        $employed: 1
+    },
+    function (err) {
+        if (err) {
+            console.log(`>>>>>>>> failed creation, ${name}, ${birth}, ${biography}`);
+        }
+        else {
+            db.get(`SELECT * FROM Artist WHERE id = ${this.lastID}`,
+            (err, row) => {
+                if (err) {
+                    console.log(`>>>>>>>> failed`);
+                    res.status(500).send();
+                }
+                console.log(`>>>>>>>> ${pp(row)}`);
+                res.status(201).send({ artist: row });
+            });
+        }
+    }
+    )
+});
 //! Fails test for an invalid ID
 //TODO: Need to validate artistID here
 apiRouter.get('/artists/:artistId', (req, res, next) => {
