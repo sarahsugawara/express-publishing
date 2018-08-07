@@ -42,7 +42,6 @@ apiRouter.post('/artists', validateArtist, (req, res, next) => {
     const name = artist.name;
     const birth = artist.dateOfBirth;
     const biography = artist.biography;
-    // console.log(`>>>>>>>> ${pp(artist)}, ${pp(name)}, ${pp(birth)}, ${pp(biography)}`);
     
     db.run(`INSERT INTO Artist (name, date_of_birth, biography, is_currently_employed) VALUES ($name, $birth, $biography, $employed)`, 
     {
@@ -53,16 +52,14 @@ apiRouter.post('/artists', validateArtist, (req, res, next) => {
     },
     function (err) {
         if (err) {
-            console.log(`>>>>>>>> failed creation, ${name}, ${birth}, ${biography}`);
+            res.status(500).send();
         }
         else {
             db.get(`SELECT * FROM Artist WHERE id = ${this.lastID}`,
             (err, row) => {
                 if (err) {
-                    console.log(`>>>>>>>> failed`);
                     res.status(500).send();
                 }
-                console.log(`>>>>>>>> ${pp(row)}`);
                 res.status(201).send({ artist: row });
             });
         }
@@ -72,7 +69,7 @@ apiRouter.post('/artists', validateArtist, (req, res, next) => {
 //! Fails test for an invalid ID
 //TODO: Need to validate artistID here
 apiRouter.get('/artists/:artistId', (req, res, next) => {
-    const artistId = req.body || req.params.artistId;
+    const artistId = req.body && req.params.artistId;
     if (artistId) {
         db.get("SELECT * FROM Artist WHERE id = $id", 
         {
@@ -92,55 +89,51 @@ apiRouter.get('/artists/:artistId', (req, res, next) => {
 });
 
 //TODO: Need to validate artistId here too
-// apiRouter.put('/artists/:id', validateArtist, (req, res, next) => {
-//     const artistId = req.params.id;
-//     const artist = req.body.artist;
-//     if (artistId) {
-//         db.run("UPDATE Artist SET name = $name, date_of_birth = $dateOfBirth, biography = $biography, is_currently_employed = $employed WHERE id = $id", 
-//         {   
-//             $name: artist.name,
-//             $dateOfBirth: artist.date_of_birth,
-//             $biography: artist.biography,
-//             $employed: artist.is_currently_employed,
-//             $id: artistId
-//         },
-//         function (err) {
-//             if (err) {
-//                 res.status(404).send();
-//             }
-//             db.get("SELECT * FROM Artist WHERE id = $id", 
-//             {
-//                 $id: artistId
-//             },
-//             (err, row) => {
-//                 if (err) {
-//                     res.status(404).send();
-//                 }
-//                 res.status(200).send({ artist: row });
-//             });
-//         }
-//         )
-//     }
-//     else {
-//         res.status(404).send();
-//     }
-// });
+apiRouter.put('/artists/:id', validateArtist, (req, res, next) => {
+    const artistId = req.params.id;
+    const artist = req.body.artist;
+    const name = artist.name;
+    const birth = artist.dateOfBirth;
+    const biography = artist.biography;
+    const employed = artist.isCurrentlyEmployed;
+    // console.log(`>>>>>>>> ${pp(artist)}`);
+    if (artistId) {
+        db.run(`UPDATE Artist SET name = $name, date_of_birth = $dateOfBirth, biography = $biography, is_currently_employed = $employed WHERE id = $id`, 
+        {   
+            $name: name,
+            $dateOfBirth: birth,
+            $biography: biography,
+            $employed: employed,
+            $id: artistId
+        },
+        function (err) {
+            if (err) {
+                res.status(404).send();
+            }
+            db.get(`SELECT * FROM Artist WHERE id = ${artistId}`, 
+            (err, row) => {
+                if (err) {
+                    res.status(404).send();
+                }
+                res.status(200).send({ artist: row });
+            });
+        }
+        )
+    }
+    else {
+        res.status(404).send();
+    }
+});
 
 apiRouter.delete('/artists/:id', (req, res, next) => {
     const artistId = req.params.id;
     if (artistId) {
-        db.run("UPDATE Artist SET is_currently_employed = 0 WHERE id = $id", 
-    {
-        $id: artistId
-    },
+        db.run(`UPDATE Artist SET is_currently_employed = 0 WHERE id = ${artistId}`, 
     function (err) {
         if (err) {
             res.status(404).send();
         }
-        db.get("SELECT * FROM Artist WHERE id = $id", 
-        {
-            $id: artistId
-        },
+        db.get(`SELECT * FROM Artist WHERE id = ${artistId}`, 
         (err, row) => {
             if (err) {
                 res.status(404).send();
@@ -154,13 +147,13 @@ apiRouter.delete('/artists/:id', (req, res, next) => {
 
 //* Begin Series Routers
 
-// const validateSeries = (req, res, next) => {
-//     const newSeries = req.body.series;
-//     if (!newSeries || !newSeries.name || !newSeries.description) {
-//         res.status(400).send();
-//     }
-//     next();
-// }
+const validateSeries = (req, res, next) => {
+    const newSeries = req.body.series;
+    if (!newSeries || !newSeries.name || !newSeries.description) {
+        res.status(400).send();
+    }
+    next();
+}
 
 apiRouter.get('/series', (req, res, next) => {
     db.all("SELECT * FROM Series", (err, rows) => {
@@ -171,40 +164,34 @@ apiRouter.get('/series', (req, res, next) => {
     });
 });
 
-//! Receiving error that "series" is undefined (within the request body). Same type of error as above.
-// apiRouter.post('/series', validateSeries, (req, res, next) => {
-//     const newSeries = req.body.series;
-//     db.run("INSERT INTO Series (name, description) VALUES ($name, $description)", 
-//     {
-//         $name: newSeries.name,
-//         $description: newSeries.description
-//     },
-//     function (err) {
-//         if (err) {
-//             res.status(400).send();
-//         }
-//         db.get("SELECT * FROM Series WHERE id = $id", 
-//         {   
-//             $id: this.lastID
-//         },
-//         (err, row) => {
-//             if (err) {
-//                 res.status(400).send();
-//             }
-//             res.status(201).send({ series: row });
-//         }
-//         );
-//     });
-// });
+apiRouter.post('/series', validateSeries, (req, res, next) => {
+    const newSeries = req.body.series;
+    // console.log(`>>>>>>>> ${pp(newSeries)}`);
+    db.run(`INSERT INTO Series (name, description) VALUES ($name, $description)`, 
+    {
+        $name: newSeries.name,
+        $description: newSeries.description
+    },
+    function (err) {
+        if (err) {
+            res.status(400).send();
+        }
+        db.get(`SELECT * FROM Series WHERE id = ${this.lastID}`, 
+        (err, row) => {
+            if (err) {
+                res.status(400).send();
+            }
+            res.status(201).send({ series: row });
+        }
+        );
+    });
+});
 
 //TODO: Need to validate series Id
 apiRouter.get('/series/:id', (req, res, next) => {
     const seriesId = req.params.id;
     if (seriesId) {
-        db.get("SELECT * FROM Series WHERE id = $id", 
-        {
-            $id: seriesId
-        },
+        db.get(`SELECT * FROM Series WHERE id = ${seriesId}`, 
         (err, row) => {
            if (err) {
                res.status(404).send();
@@ -218,64 +205,64 @@ apiRouter.get('/series/:id', (req, res, next) => {
     }
 });
 
-//!Fails because 'series' is undefined
 //TODO: Need to validate series Id
-// apiRouter.put('/series/:id', validateSeries, (req, res, next) => {
-//     const seriesId = req.params.id;
-//     const updatedSeries = req.body.series;
-//     if (seriesId) {
-//         db.run("UPDATE Series SET name = $name, description = $description WHERE id = $id",
-//         {
-//             $name: updatedSeries.name,
-//             $description: updatedSeries.description
-//         },
-//         function (err) {
-//             if (err) {
-//                 res.status(400).send();
-//             }
-//             db.get("SELECT * FROM series WHERE id = $id",
-//             {
-//                 $id: this.lastID
-//             },
-//             (err, row) => {
-//                 if (err) {
-//                     res.status(400).send();
-//                 }
-//                 res.status(200).send({ series: row });
-//             }
-//             );
-//         }
-//         );
-//     }
-//     else {
-//         res.status(404).send();
-//     }
-// });
+apiRouter.put('/series/:id', validateSeries, (req, res, next) => {
+    const seriesId = req.params.id;
+    const updatedSeries = req.body.series;
+        // console.log(`>>>>>>>> ${pp(updatedSeries)}`);
+    if (seriesId) {
+        db.run(`UPDATE Series SET name = $name, description = $description WHERE id = $id`,
+        {
+            $name: updatedSeries.name,
+            $description: updatedSeries.description,
+            $id: seriesId
+        },
+        function (err) {
+            if (err) {
+                console.log(`>>>>>>>> failed in the updating`);
+                res.status(400).send();
+            }
+            db.get(`SELECT * FROM series WHERE id = ${seriesId}`,
+            (err, row) => {
+                if (err) {
+                    res.status(400).send();
+                }
+                res.status(200).send({ series: row });
+            }
+            );
+        }
+        );
+    }
+    else {
+        res.status(404).send();
+    }
+});
 
 apiRouter.delete('/series/:id', (req, res, next) => {
     const seriesId = req.params.id;
     if (seriesId) {
-        db.all("SELECT * FROM Issue WHERE series_id = $seriesId", 
-        {
-            $seriesId: seriesId
-        },
+        db.all(`SELECT * FROM Issue WHERE series_id = ${seriesId}`, 
         (err, rows) => {
             if (err) {
-                res.status(404).send();
+                // console.log(`>>>>>>>> error fetching`);
+                res.status(400).send();
             }
             else if (rows) {
-                res.status(404).send('Can\'t delete series because it has related issues');
+                // console.log(`>>>>>>>> has rows`);
+                res.status(400).send('Can\'t delete series because it has related issues');
             }
             else if (!rows) {
-                db.run("DELETE FROM Series WHERE id = $id IS NULL",
-                {
-                    $id: seriesId
-                },
+                // console.log(`>>>>>>>> doesn't have rows!`);
+                db.run(`DELETE FROM Series WHERE id = ${seriesId} IS NULL`,
                 (err) => {
                     if (err) {
+                        // console.log(`>>>>>>>> failed to delete`);
                         res.status(400).send();
                     }
-                    res.status(204).send();
+                    else {
+                        // console.log(`>>>>>>>> succeeded deleting`);
+                        res.status(204).send();
+                    }
                 }
                 );
             }
@@ -289,23 +276,80 @@ apiRouter.delete('/series/:id', (req, res, next) => {
 
 //* Begin Issues routers
 
-apiRouter.get('/series/:id/issues', (req, res, next) => {
-    const seriesId = req.params.id;
-    db.all("SELECT * FROM Issue WHERE series_id = $id",
-        {
-            $id: seriesId
-        },
-        (err, rows) => {
-        if (err) {
-            res.status(500).send(err);
-        }
-        else if (rows) {
-            res.status(200).send({ issues: rows });
-        }
-        else {
-            res.status(404).send();
-        }
-    });
+const validateIssue = (req, res, next) => {
+    const newIssue = req.body.issues;
+    if (!newIssue || !newIssue.name || !newIssue.issue_number || newIssue.publication_date || newIssue.artist_id || newIssue.series_id) {
+        console.log(`>>>>>>>> issue info is incomplete`);
+        res.status(400).send();
+    }
+    console.log(`>>>>>>>> valid issue`);
+    next();
+}
+
+const validateSeriesId = (req, res, next) => {
+    const seriesId = req.body.issue && req.body.issue.seriesId;
+    console.log(`>>>>>>>> ${pp(req.body.issue)}`);
+    // db.get(`SELECT * FROM Series WHERE id = ${seriesId}`, 
+    // (err, row) => {
+    //     if (err) {
+    //         console.log(`>>>>>>>> series Id error`);
+    //         res.status(404).send();
+    //     }
+    //     else if (!row) {
+    //         console.log(`>>>>>>>> no such series id`);
+    //         res.status(404).send();
+    //     }
+    //     else if (row) {
+    //         console.log(`>>>>>>>> has a matching series id`);
+    //         next();
+    //     }
+    // });
+}
+
+apiRouter.get('/series/:id/issues', validateSeriesId, (req, res, next) => {
+    const seriesId = req.body.issues && req.body.issues.series_id;
+    console.log(`>>>>>>>> ${pp(seriesId)}`);
+    // db.all(`SELECT * FROM Issue WHERE series_id = ${seriesId}`,
+    //     (err, rows) => {
+    //     if (err) {
+    //         res.status(500).send(err);
+    //     }
+    //     else if (rows) {
+    //         res.status(200).send({ issues: rows });
+    //     }
+    //     else if (!rows) {
+    //         res.status(404).send();
+    //     }
+    // });
+});
+//*I think I need to secure seriesId elsewhere, because it's not in the request body
+apiRouter.post('/series/:id/issues', validateSeriesId, validateIssue, (req, res, next) => {
+    const newIssue = req.body.issue;
+    console.log(`>>>>>>>> ${pp(newIssue)}`);
+    // db.run(`INSERT INTO Issue (name, issue_number, publication_date, artist_id, series_id) VALUES ($name, $number, $date, $artistId, $seriesId)`, 
+    // {
+    //     $name: newIssue.name,
+    //     $number: newIssue.issueNumber,
+    //     $date: newIssue.publicationDate,
+    //     $artistId: newIssue.artistId,
+    //     $seriesId: newIssue.seriesId
+    // },
+    // function (err) {
+    //     if (err) {
+    //         res.status(500).send();
+    //     }
+    //     else {
+    //         db.get(`SELECT * FROM Issue WHERE id = ${this.lastID}`, 
+    //         (err, row) => {
+    //             if (err) {
+    //                 res.status(500).send();
+    //             }
+    //             else {
+    //                 res.status(201).send({ issue: row });
+    //             }
+    //         });
+    //     }
+    // });
 });
 
 
